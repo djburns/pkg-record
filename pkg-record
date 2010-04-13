@@ -1,0 +1,79 @@
+#!/usr/bin/perl
+
+use Getopt::Long;
+Getopt::Long::Configure ("bundling");
+
+my @ignore = '';
+my $list = '';
+my $added = '';
+my $removed = '';
+my $backup = 1;
+my $savefile = "/var/backups/packages.list";
+my $loadfile = "/var/backups/packages.list";
+my $verbose = 1;
+my $delimiter = ' ';
+
+GetOptions (
+	'verbose|v' => \$verbose,
+	'quiet|q' => sub{$verbose=0},
+	'ignore|i=s' => \@ignore,
+	'list|l' => \$list,
+	'added|a' => sub{$added=1;$backup=0;$removed=0;$list=1},
+	'backup|b' => sub{$added=0;$backup=1;$removed=0},
+	'no-backup|n' => sub{$backup=0},
+	'removed|r' => sub{$added=0;$backup=0;$removed=1;$list=1},
+	'savefile=s' => \$savefile,
+	'loadfile=s' => \$loadfile,
+	'delimiter=s' => \$delimiter
+);
+
+$savefile = pop() || $savefile;
+$loadfile = pop() || $loadfile;
+
+print "verbose: $verbose\n";
+print "list: $list\n";
+print "added: $added\n";
+print "backup: $backup\n";
+print "removed: $removed\n";
+print "delimiter: $delimiter\n";
+print "ignore: @ignore\n";
+print "savefile: $savefile\n";
+print "loadfile: $loadfile\n";
+
+exit 0;
+$DIR = "/home/djburns/";
+$NAME = ".packages.bk";
+
+$filename = $DIR.$NAME;
+$tmpfile = $DIR.$NAME.'.tmp';
+
+$cmd = shift;
+
+if ($cmd eq 'backup'){
+	`dpkg -l > $filename `;
+	`dpkg -l | grep '^ii' | cut -d ' ' -f3 > $filename `;
+	exit 0;
+}
+if ($cmd eq 'list'){
+	$list = `cat $filename | grep  '^ii' | cut -d ' ' -f3`;
+	print $list;
+	exit 0;
+}
+if ($cmd eq 'added'){
+	`dpkg -l | grep '^ii' | cut -d ' ' -f3 > $tmpfile `;
+	print `diff --suppress-common-lines $tmpfile $filename | grep '<' | cut -d ' ' -f2 | tr "\n" " "`;
+	`rm $tmpfile`; 
+	exit 0;
+}
+if ($cmd eq 'removed'){
+	`dpkg -l | grep '^ii' | cut -d ' ' -f3 > $tmpfile `;
+	print `diff --suppress-common-lines $tmpfile $filename | grep '>' | cut -d ' ' -f2 | tr "\n" " "`;
+	`rm $tmpfile`; 
+	exit 0;
+}
+print "$0\n";
+print "Keeps a record of deb packages\n";
+print "USAGE: backup (backup|list|added|removed)\n";
+
+exit 0;
+
